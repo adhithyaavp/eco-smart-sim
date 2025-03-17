@@ -50,13 +50,13 @@ export const SimulationEngine: React.FC = () => {
 
   // Simulation progress effect
   useEffect(() => {
-    let interval: number;
+    let interval: NodeJS.Timeout | null = null;
     
     if (running) {
       interval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 100) {
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             setRunning(false);
             setSimulationComplete(true);
             toast.success('Simulation completed! View optimization results below.');
@@ -67,7 +67,9 @@ export const SimulationEngine: React.FC = () => {
       }, 500);
     }
     
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [running]);
 
   // Filter sensors by type for the simulation
@@ -316,3 +318,4 @@ export const SimulationEngine: React.FC = () => {
     </div>
   );
 };
+
