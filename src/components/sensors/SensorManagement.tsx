@@ -1,92 +1,31 @@
 
 import React, { useState } from 'react';
-import { PlusCircle, Search, Download, Upload, Filter, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Search, Download, Upload, Filter, MoreHorizontal, Play, Pause } from 'lucide-react';
 import { SensorForm } from './SensorForm';
 import { StatusBadge } from '../common/StatusBadge';
-
-// Sample sensor data
-const initialSensors = [
-  {
-    id: 1,
-    name: 'T-101',
-    type: 'Temperature',
-    value: '23.5°C',
-    frequency: '5s',
-    location: 'Main Assembly',
-    status: 'success',
-    lastUpdated: '2min ago'
-  },
-  {
-    id: 2,
-    name: 'P-201',
-    type: 'Pressure',
-    value: '2.4 bar',
-    frequency: '10s',
-    location: 'Hydraulic System',
-    status: 'success',
-    lastUpdated: '1min ago'
-  },
-  {
-    id: 3,
-    name: 'T-103',
-    type: 'Temperature',
-    value: '--',
-    frequency: '5s',
-    location: 'Production Line 2',
-    status: 'error',
-    lastUpdated: '3h ago'
-  },
-  {
-    id: 4,
-    name: 'H-301',
-    type: 'Humidity',
-    value: '68%',
-    frequency: '30s',
-    location: 'Storage Area',
-    status: 'warning',
-    lastUpdated: '5min ago'
-  },
-  {
-    id: 5,
-    name: 'P-102',
-    type: 'Power',
-    value: '42.1 kW',
-    frequency: '1s',
-    location: 'Main Assembly',
-    status: 'success',
-    lastUpdated: 'Just now'
-  },
-  {
-    id: 6,
-    name: 'F-201',
-    type: 'Flow',
-    value: '12.3 L/min',
-    frequency: '2s',
-    location: 'Cooling System',
-    status: 'success',
-    lastUpdated: '30s ago'
-  }
-];
+import { useSensorSimulation } from '../../hooks/useSensorSimulation';
+import { toast } from 'sonner';
 
 export const SensorManagement: React.FC = () => {
-  const [sensors, setSensors] = useState(initialSensors);
+  const { sensors, isSimulating, toggleSimulation, addSensor } = useSensorSimulation();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedType, setSelectedType] = useState('All');
   
   const handleAddSensor = (data: any) => {
     const newSensor = {
-      id: sensors.length + 1,
       name: data.name,
       type: data.type.charAt(0).toUpperCase() + data.type.slice(1),
-      value: `-- ${data.unit}`,
-      frequency: `${data.frequency}s`,
+      unit: data.unit,
+      min: parseFloat(data.min) || 0,
+      max: parseFloat(data.max) || 100,
+      frequency: parseInt(data.frequency) * 1000 || 5000, // Convert seconds to milliseconds
       location: data.location || 'Not specified',
-      status: 'success',
-      lastUpdated: 'Just now'
     };
     
-    setSensors([...sensors, newSensor]);
+    addSensor(newSensor);
+    toast.success(`Sensor ${data.name} added successfully!`);
+    setShowForm(false);
   };
   
   const filteredSensors = sensors.filter(sensor => {
@@ -107,13 +46,24 @@ export const SensorManagement: React.FC = () => {
           <h1 className="text-2xl font-semibold tracking-tight">Sensor Management</h1>
           <p className="text-muted-foreground">Configure and monitor factory sensors.</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors sm:self-start"
-        >
-          <PlusCircle size={16} />
-          Add Sensor
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={toggleSimulation}
+            className={`flex items-center gap-2 px-4 py-2 ${
+              isSimulating ? 'bg-muted text-foreground' : 'bg-success text-success-foreground'
+            } rounded-md text-sm font-medium hover:opacity-90 transition-colors sm:self-start`}
+          >
+            {isSimulating ? <Pause size={16} /> : <Play size={16} />}
+            {isSimulating ? 'Pause Simulation' : 'Start Simulation'}
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors sm:self-start"
+          >
+            <PlusCircle size={16} />
+            Add Sensor
+          </button>
+        </div>
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4">
@@ -178,10 +128,10 @@ export const SensorManagement: React.FC = () => {
                   <td className="px-4 py-3 text-sm font-medium">{sensor.name}</td>
                   <td className="px-4 py-3 text-sm">{sensor.type}</td>
                   <td className="px-4 py-3 text-sm">{sensor.value}</td>
-                  <td className="px-4 py-3 text-sm">{sensor.frequency}</td>
+                  <td className="px-4 py-3 text-sm">{(sensor.frequency / 1000)}s</td>
                   <td className="px-4 py-3 text-sm">{sensor.location}</td>
                   <td className="px-4 py-3 text-sm">
-                    <StatusBadge status={sensor.status as 'success' | 'warning' | 'error'} />
+                    <StatusBadge status={sensor.status} />
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{sensor.lastUpdated}</td>
                   <td className="px-4 py-3 text-right">

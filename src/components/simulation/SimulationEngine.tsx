@@ -1,42 +1,79 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TimelineChart } from './TimelineChart';
 import { Play, Pause, RotateCcw, Save, Clock, ChevronRight } from 'lucide-react';
+import { useSensorSimulation } from '../../hooks/useSensorSimulation';
+import { toast } from 'sonner';
 
 export const SimulationEngine: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
+  const { sensors, isSimulating, toggleSimulation } = useSensorSimulation();
   const [progress, setProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('scenario');
+  const [running, setRunning] = useState(false);
+  const [simulationComplete, setSimulationComplete] = useState(false);
 
-  const toggleSimulation = () => {
-    setIsRunning(!isRunning);
-    if (!isRunning) {
-      // Start a fake progress timer
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsRunning(false);
-            return 100;
-          }
-          return prev + 5;
-        });
-      }, 500);
+  // Manage simulation progress
+  const startSimulation = () => {
+    if (progress === 100) {
+      resetSimulation();
+      setTimeout(() => {
+        setRunning(true);
+      }, 100);
+      return;
     }
+    
+    setRunning(true);
+  };
+
+  const pauseSimulation = () => {
+    setRunning(false);
   };
 
   const resetSimulation = () => {
-    setIsRunning(false);
+    setRunning(false);
     setProgress(0);
+    setSimulationComplete(false);
   };
 
-  const sensors = [
-    { id: 1, name: 'T-101', type: 'Temperature', enabled: true },
-    { id: 2, name: 'P-201', type: 'Pressure', enabled: true },
-    { id: 3, name: 'H-301', type: 'Humidity', enabled: false },
-    { id: 4, name: 'P-102', type: 'Power', enabled: true },
-    { id: 5, name: 'F-201', type: 'Flow', enabled: true },
-  ];
+  const toggleRunning = () => {
+    if (running) {
+      pauseSimulation();
+    } else {
+      startSimulation();
+    }
+  };
+
+  // Save simulation results
+  const saveResults = () => {
+    toast.success('Simulation results saved successfully!');
+  };
+
+  // Simulation progress effect
+  useEffect(() => {
+    let interval: number;
+    
+    if (running) {
+      interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setRunning(false);
+            setSimulationComplete(true);
+            toast.success('Simulation completed! View optimization results below.');
+            return 100;
+          }
+          return prev + 4;  // Adjust speed as needed
+        });
+      }, 500);
+    }
+    
+    return () => clearInterval(interval);
+  }, [running]);
+
+  // Filter sensors by type for the simulation
+  const enabledSensors = sensors.filter(sensor => 
+    ['Temperature', 'Pressure', 'Power', 'Flow'].includes(sensor.type)
+  ).slice(0, 5); // Limit to 5 for display purposes
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -48,16 +85,16 @@ export const SimulationEngine: React.FC = () => {
 
         <div className="flex gap-2 sm:self-start">
           <button
-            onClick={toggleSimulation}
-            disabled={progress === 100}
+            onClick={toggleRunning}
+            disabled={simulationComplete && progress === 100}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              isRunning
+              running
                 ? 'bg-muted text-foreground hover:bg-muted/80'
                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
             }`}
           >
-            {isRunning ? <Pause size={16} /> : <Play size={16} />}
-            {isRunning ? 'Pause' : progress === 0 ? 'Run Simulation' : 'Resume'}
+            {running ? <Pause size={16} /> : <Play size={16} />}
+            {running ? 'Pause' : progress === 0 ? 'Run Simulation' : 'Resume'}
           </button>
 
           <button
@@ -145,14 +182,14 @@ export const SimulationEngine: React.FC = () => {
 
               {activeTab === 'sensors' && (
                 <div className="space-y-3">
-                  {sensors.map((sensor) => (
+                  {enabledSensors.map((sensor) => (
                     <div key={sensor.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md">
                       <div>
                         <p className="text-sm font-medium">{sensor.name}</p>
-                        <p className="text-xs text-muted-foreground">{sensor.type}</p>
+                        <p className="text-xs text-muted-foreground">{sensor.type} - {sensor.value}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked={sensor.enabled} className="sr-only peer" />
+                        <input type="checkbox" defaultChecked={true} className="sr-only peer" />
                         <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                       </label>
                     </div>
@@ -207,7 +244,10 @@ export const SimulationEngine: React.FC = () => {
                   <h3 className="text-sm font-medium">Simulation Progress</h3>
                 </div>
                 {progress === 100 && (
-                  <button className="flex items-center gap-1 text-xs text-primary">
+                  <button 
+                    className="flex items-center gap-1 text-xs text-primary"
+                    onClick={saveResults}
+                  >
                     <Save size={12} />
                     Save Results
                   </button>
