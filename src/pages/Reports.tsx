@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSensorSimulation } from '../hooks/useSensorSimulation';
 import { 
@@ -5,7 +6,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, BarChart3, FileBarChart, PieChart as PieChartIcon, Filter, Calendar, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, FileText, BarChart3, FileBarChart, PieChart as PieChartIcon, Filter, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { format } from 'date-fns';
@@ -109,48 +110,6 @@ const Reports: React.FC = () => {
   };
 
   const historicalData = generateHistoricalData();
-
-  // New peak usage data with more detail
-  const generatePeakUsageData = () => {
-    const hours = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
-    
-    return hours.map(hour => {
-      // Simulate different usage patterns based on time of day
-      const isBusinessHours = hour.startsWith('08') || hour.startsWith('10') || hour.startsWith('12') || 
-                              hour.startsWith('14') || hour.startsWith('16') || hour.startsWith('18');
-      const isPeakHour = hour.startsWith('10') || hour.startsWith('14') || hour.startsWith('16');
-      
-      // Base value varies by time of day
-      const baseValue = isBusinessHours ? 180 + Math.random() * 40 : 80 + Math.random() * 30;
-      const peakAddition = isPeakHour ? 50 + Math.random() * 30 : 0;
-      const actualValue = baseValue + peakAddition;
-      
-      // Calculate optimized values (simulating 15-25% reduction during peaks)
-      const optimizedReduction = isPeakHour ? 0.2 + Math.random() * 0.05 : 0.15 + Math.random() * 0.05;
-      const optimizedValue = actualValue * (1 - optimizedReduction);
-      
-      // Calculate threshold values
-      const warningThreshold = isPeakHour ? 220 : 180;
-      const criticalThreshold = isPeakHour ? 240 : 200;
-      
-      return {
-        hour,
-        actual: Math.round(actualValue),
-        optimized: Math.round(optimizedValue),
-        warningThreshold,
-        criticalThreshold,
-        status: actualValue > criticalThreshold ? 'critical' : actualValue > warningThreshold ? 'warning' : 'normal'
-      };
-    });
-  };
-
-  const peakUsageData = generatePeakUsageData();
-  
-  // Calculate peak metrics
-  const peakHourData = peakUsageData.reduce((max, item) => item.actual > max.actual ? item : max, peakUsageData[0]);
-  const averageUsage = Math.round(peakUsageData.reduce((sum, item) => sum + item.actual, 0) / peakUsageData.length);
-  const potentialPeakSavings = Math.round(peakHourData.actual - peakHourData.optimized);
-  const peakReductionPercent = Math.round((potentialPeakSavings / peakHourData.actual) * 100);
 
   // Calculate totals for the cards
   const totalPowerUsage = aggregatedData.reduce((acc, item) => acc + item.current, 0);
@@ -539,160 +498,30 @@ const Reports: React.FC = () => {
               </div>
             </div>
             
-            <div className="mt-6 border rounded-lg bg-card">
-              <div className="border-b p-4">
-                <h3 className="text-lg font-medium">Peak Usage Analysis</h3>
-                <p className="text-sm text-muted-foreground mt-1">24-hour power consumption pattern with peak identification</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
-                <Card className="md:col-span-3">
-                  <CardContent className="pt-6">
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={peakUsageData}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="hour" />
-                          <YAxis unit=" kW" domain={[0, 300]} />
-                          <Tooltip 
-                            formatter={(value) => [`${value} kW`, 'Power Usage']}
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))',
-                              borderColor: 'hsl(var(--border))',
-                              borderRadius: 'var(--radius)'
-                            }}
-                          />
-                          <Legend />
-                          <Line 
-                            type="monotone" 
-                            name="Actual Usage" 
-                            dataKey="actual" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={2}
-                            dot={{
-                              stroke: 'hsl(var(--primary))',
-                              strokeWidth: 2,
-                              r: 4,
-                              fill: 'hsl(var(--card))'
-                            }}
-                            activeDot={{ r: 8 }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            name="Optimized Usage" 
-                            dataKey="optimized" 
-                            stroke="hsl(var(--success))" 
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
-                            dot={{
-                              stroke: 'hsl(var(--success))',
-                              strokeWidth: 2,
-                              r: 4,
-                              fill: 'hsl(var(--card))'
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            name="Warning Threshold" 
-                            dataKey="warningThreshold" 
-                            stroke="hsl(var(--warning))" 
-                            strokeWidth={1.5}
-                            strokeDasharray="3 3"
-                            dot={false}
-                          />
-                          <Line 
-                            type="monotone" 
-                            name="Critical Threshold" 
-                            dataKey="criticalThreshold" 
-                            stroke="hsl(var(--destructive))" 
-                            strokeWidth={1.5}
-                            strokeDasharray="3 3"
-                            dot={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Peak Hour</CardDescription>
-                      <CardTitle className="text-xl font-bold flex items-center gap-1">
-                        {peakHourData.hour}
-                        {peakHourData.status === 'critical' && (
-                          <AlertTriangle size={16} className="text-destructive" />
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Usage:</p>
-                          <p className="font-medium">{peakHourData.actual} kW</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Optimized:</p>
-                          <p className="font-medium text-success">{peakHourData.optimized} kW</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Peak vs Average</CardDescription>
-                      <CardTitle className="text-xl font-bold">{Math.round((peakHourData.actual / averageUsage) * 100)}%</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">Average usage: {averageUsage} kW</p>
-                      <div className="w-full h-1.5 bg-muted mt-2 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-primary h-full" 
-                          style={{ width: `${Math.min(100, Math.round((peakHourData.actual / averageUsage) * 100))}%` }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Peak Reduction</CardDescription>
-                      <CardTitle className="text-xl font-bold text-success">{peakReductionPercent}%</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">Potential savings: {potentialPeakSavings} kW</p>
-                      <div className="w-full h-1.5 bg-muted mt-2 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-success h-full" 
-                          style={{ width: `${peakReductionPercent}%` }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-              
-              <div className="p-4 border-t">
-                <h4 className="font-medium mb-3">Peak Shaving Recommendations</h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
-                    <span>Implement load shedding during identified peak hours (10:00, 14:00, 16:00)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
-                    <span>Schedule high-power operations outside of peak hours to flatten consumption curve</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
-                    <span>Consider installing energy storage systems to reduce peak demand charges</span>
-                  </li>
-                </ul>
+            <div className="mt-6 border rounded-lg p-4 bg-card">
+              <h3 className="text-lg font-medium mb-4">Peak Usage Analysis</h3>
+              <div className="h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={energyDataOverTime}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis unit=" kW" />
+                    <Tooltip 
+                      formatter={(value) => [`${value} kW`, 'Power Usage']}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))',
+                        borderColor: 'hsl(var(--border))',
+                        borderRadius: 'var(--radius)'
+                      }}
+                    />
+                    <Legend />
+                    <Line type="monotone" name="Current" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    <Line type="monotone" name="Optimized" dataKey="optimized" stroke="hsl(var(--success))" strokeDasharray="5 5" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -765,4 +594,270 @@ const Reports: React.FC = () => {
                         <Tooltip 
                           formatter={(value) => [`${value} bar`, 'Pressure']}
                           contentStyle={{ 
-                            backgroundColor: 'hsl(
+                            backgroundColor: 'hsl(var(--card))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          name="Pressure" 
+                          stroke="hsl(var(--warning))" 
+                          activeDot={{ r: 8 }} 
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">All Sensor Readings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Sensor ID</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Updated</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSensors.map((sensor) => (
+                        <TableRow key={sensor.id}>
+                          <TableCell className="font-medium">{sensor.name}</TableCell>
+                          <TableCell>{sensor.type}</TableCell>
+                          <TableCell>{sensor.value}</TableCell>
+                          <TableCell>{sensor.location}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              sensor.status === 'success' ? 'bg-success/20 text-success' :
+                              sensor.status === 'warning' ? 'bg-warning/20 text-warning' :
+                              'bg-destructive/20 text-destructive'
+                            }`}>
+                              {sensor.status === 'success' ? 'Normal' : 
+                              sensor.status === 'warning' ? 'Warning' : 'Error'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{sensor.lastUpdated}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="bg-muted/30 border rounded-lg p-4">
+              <h3 className="text-lg font-medium mb-2">Sensor Statistics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground">Total Sensors</p>
+                  <p className="text-2xl font-bold">{filteredSensors.length}</p>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground">Operational</p>
+                  <p className="text-2xl font-bold text-success">
+                    {filteredSensors.filter(s => s.status === 'success').length}
+                  </p>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground">Warnings</p>
+                  <p className="text-2xl font-bold text-warning">
+                    {filteredSensors.filter(s => s.status === 'warning').length}
+                  </p>
+                </div>
+                <div className="bg-card border rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground">Errors</p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {filteredSensors.filter(s => s.status === 'error').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="export" className="p-6">
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Export & Report Options</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div className="border rounded-xl p-6 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div className="flex items-start">
+                  <div className="mr-4 p-3 bg-primary/10 rounded-full">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium">Full Report (PDF)</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Complete energy analysis with recommendations and optimization potential
+                    </p>
+                    <div className="mt-3 border-t pt-3">
+                      <h4 className="text-sm font-medium mb-2">Report Contents:</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Executive Summary</li>
+                        <li>• Energy Consumption Analysis</li>
+                        <li>• Sensor Data Readings</li>
+                        <li>• Optimization Recommendations</li>
+                        <li>• ROI Calculations</li>
+                      </ul>
+                    </div>
+                    <button className="mt-4 text-primary text-sm font-medium flex items-center gap-2">
+                      <Download size={16} />
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-xl p-6 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div className="flex items-start">
+                  <div className="mr-4 p-3 bg-primary/10 rounded-full">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium">Data Export (Excel)</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Raw sensor data and calculations in spreadsheet format
+                    </p>
+                    <div className="mt-3 border-t pt-3">
+                      <h4 className="text-sm font-medium mb-2">File Contents:</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Sensor Readings (All Types)</li>
+                        <li>• Historical Data (Last 30 Days)</li>
+                        <li>• Calculation Formulas</li>
+                        <li>• Pivot Tables</li>
+                        <li>• Data Visualization Templates</li>
+                      </ul>
+                    </div>
+                    <button className="mt-4 text-primary text-sm font-medium flex items-center gap-2">
+                      <Download size={16} />
+                      Download Excel
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-xl p-6 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div className="flex items-start">
+                  <div className="mr-4 p-3 bg-primary/10 rounded-full">
+                    <PieChartIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium">Charts & Graphs</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Visual representations of energy usage and optimization
+                    </p>
+                    <div className="mt-3 border-t pt-3">
+                      <h4 className="text-sm font-medium mb-2">Available Formats:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="px-2 py-1 bg-muted rounded text-xs">PNG</span>
+                        <span className="px-2 py-1 bg-muted rounded text-xs">SVG</span>
+                        <span className="px-2 py-1 bg-muted rounded text-xs">PDF</span>
+                        <span className="px-2 py-1 bg-muted rounded text-xs">JPEG</span>
+                      </div>
+                    </div>
+                    <button className="mt-4 text-primary text-sm font-medium flex items-center gap-2">
+                      <Download size={16} />
+                      Download Images
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-xl p-6 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div className="flex items-start">
+                  <div className="mr-4 p-3 bg-primary/10 rounded-full">
+                    <FileBarChart className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium">Custom Report</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Create a customized report with selected metrics and date ranges
+                    </p>
+                    <div className="mt-3 border-t pt-3">
+                      <h4 className="text-sm font-medium mb-2">Customization Options:</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <input type="checkbox" id="temp" className="rounded border-muted-foreground" />
+                          <label htmlFor="temp" className="text-xs">Temperature Data</label>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="checkbox" id="power" className="rounded border-muted-foreground" />
+                          <label htmlFor="power" className="text-xs">Power Usage</label>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="checkbox" id="press" className="rounded border-muted-foreground" />
+                          <label htmlFor="press" className="text-xs">Pressure Readings</label>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="checkbox" id="opt" className="rounded border-muted-foreground" />
+                          <label htmlFor="opt" className="text-xs">Optimization</label>
+                        </div>
+                      </div>
+                    </div>
+                    <button className="mt-4 text-primary text-sm font-medium flex items-center gap-2">
+                      <Download size={16} />
+                      Configure & Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-muted/30 rounded-lg p-4 border mt-6">
+              <h3 className="text-lg font-medium mb-2">Scheduling Options</h3>
+              <p className="text-sm text-muted-foreground mb-4">Set up automated report delivery to your email</p>
+              
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Report Type</label>
+                  <select className="bg-background border rounded px-3 py-2 text-sm w-full sm:w-auto">
+                    <option>Full PDF Report</option>
+                    <option>Excel Data Export</option>
+                    <option>Executive Summary</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium block mb-1">Frequency</label>
+                  <select className="bg-background border rounded px-3 py-2 text-sm w-full sm:w-auto">
+                    <option>Daily</option>
+                    <option>Weekly</option>
+                    <option>Monthly</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium block mb-1">Email</label>
+                  <input 
+                    type="email" 
+                    placeholder="your@email.com" 
+                    className="bg-background border rounded px-3 py-2 text-sm w-full sm:w-auto"
+                  />
+                </div>
+                
+                <button className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm font-medium">
+                  Schedule Reports
+                </button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default Reports;
