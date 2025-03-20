@@ -6,7 +6,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, BarChart3, FileBarChart, PieChart as PieChartIcon, Filter, Calendar, RefreshCw } from 'lucide-react';
+import { Download, FileText, BarChart3, FileBarChart, PieChart as PieChartIcon, Filter, Calendar, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { format } from 'date-fns';
@@ -110,6 +110,48 @@ const Reports: React.FC = () => {
   };
 
   const historicalData = generateHistoricalData();
+
+  // New peak usage data with more detail
+  const generatePeakUsageData = () => {
+    const hours = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+    
+    return hours.map(hour => {
+      // Simulate different usage patterns based on time of day
+      const isBusinessHours = hour.startsWith('08') || hour.startsWith('10') || hour.startsWith('12') || 
+                              hour.startsWith('14') || hour.startsWith('16') || hour.startsWith('18');
+      const isPeakHour = hour.startsWith('10') || hour.startsWith('14') || hour.startsWith('16');
+      
+      // Base value varies by time of day
+      const baseValue = isBusinessHours ? 180 + Math.random() * 40 : 80 + Math.random() * 30;
+      const peakAddition = isPeakHour ? 50 + Math.random() * 30 : 0;
+      const actualValue = baseValue + peakAddition;
+      
+      // Calculate optimized values (simulating 15-25% reduction during peaks)
+      const optimizedReduction = isPeakHour ? 0.2 + Math.random() * 0.05 : 0.15 + Math.random() * 0.05;
+      const optimizedValue = actualValue * (1 - optimizedReduction);
+      
+      // Calculate threshold values
+      const warningThreshold = isPeakHour ? 220 : 180;
+      const criticalThreshold = isPeakHour ? 240 : 200;
+      
+      return {
+        hour,
+        actual: Math.round(actualValue),
+        optimized: Math.round(optimizedValue),
+        warningThreshold,
+        criticalThreshold,
+        status: actualValue > criticalThreshold ? 'critical' : actualValue > warningThreshold ? 'warning' : 'normal'
+      };
+    });
+  };
+
+  const peakUsageData = generatePeakUsageData();
+  
+  // Calculate peak metrics
+  const peakHourData = peakUsageData.reduce((max, item) => item.actual > max.actual ? item : max, peakUsageData[0]);
+  const averageUsage = Math.round(peakUsageData.reduce((sum, item) => sum + item.actual, 0) / peakUsageData.length);
+  const potentialPeakSavings = Math.round(peakHourData.actual - peakHourData.optimized);
+  const peakReductionPercent = Math.round((potentialPeakSavings / peakHourData.actual) * 100);
 
   // Calculate totals for the cards
   const totalPowerUsage = aggregatedData.reduce((acc, item) => acc + item.current, 0);
@@ -498,30 +540,160 @@ const Reports: React.FC = () => {
               </div>
             </div>
             
-            <div className="mt-6 border rounded-lg p-4 bg-card">
-              <h3 className="text-lg font-medium mb-4">Peak Usage Analysis</h3>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={energyDataOverTime}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis unit=" kW" />
-                    <Tooltip 
-                      formatter={(value) => [`${value} kW`, 'Power Usage']}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))',
-                        borderColor: 'hsl(var(--border))',
-                        borderRadius: 'var(--radius)'
-                      }}
-                    />
-                    <Legend />
-                    <Line type="monotone" name="Current" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
-                    <Line type="monotone" name="Optimized" dataKey="optimized" stroke="hsl(var(--success))" strokeDasharray="5 5" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+            <div className="mt-6 border rounded-lg bg-card">
+              <div className="border-b p-4">
+                <h3 className="text-lg font-medium">Peak Usage Analysis</h3>
+                <p className="text-sm text-muted-foreground mt-1">24-hour power consumption pattern with peak identification</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+                <Card className="md:col-span-3">
+                  <CardContent className="pt-6">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={peakUsageData}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="hour" />
+                          <YAxis unit=" kW" domain={[0, 300]} />
+                          <Tooltip 
+                            formatter={(value) => [`${value} kW`, 'Power Usage']}
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))',
+                              borderColor: 'hsl(var(--border))',
+                              borderRadius: 'var(--radius)'
+                            }}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            name="Actual Usage" 
+                            dataKey="actual" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2}
+                            dot={{
+                              stroke: 'hsl(var(--primary))',
+                              strokeWidth: 2,
+                              r: 4,
+                              fill: 'hsl(var(--card))'
+                            }}
+                            activeDot={{ r: 8 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            name="Optimized Usage" 
+                            dataKey="optimized" 
+                            stroke="hsl(var(--success))" 
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={{
+                              stroke: 'hsl(var(--success))',
+                              strokeWidth: 2,
+                              r: 4,
+                              fill: 'hsl(var(--card))'
+                            }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            name="Warning Threshold" 
+                            dataKey="warningThreshold" 
+                            stroke="hsl(var(--warning))" 
+                            strokeWidth={1.5}
+                            strokeDasharray="3 3"
+                            dot={false}
+                          />
+                          <Line 
+                            type="monotone" 
+                            name="Critical Threshold" 
+                            dataKey="criticalThreshold" 
+                            stroke="hsl(var(--destructive))" 
+                            strokeWidth={1.5}
+                            strokeDasharray="3 3"
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Peak Hour</CardDescription>
+                      <CardTitle className="text-xl font-bold flex items-center gap-1">
+                        {peakHourData.hour}
+                        {peakHourData.status === 'critical' && (
+                          <AlertTriangle size={16} className="text-destructive" />
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Usage:</p>
+                          <p className="font-medium">{peakHourData.actual} kW</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Optimized:</p>
+                          <p className="font-medium text-success">{peakHourData.optimized} kW</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Peak vs Average</CardDescription>
+                      <CardTitle className="text-xl font-bold">{Math.round((peakHourData.actual / averageUsage) * 100)}%</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">Average usage: {averageUsage} kW</p>
+                      <div className="w-full h-1.5 bg-muted mt-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-primary h-full" 
+                          style={{ width: `${Math.min(100, Math.round((peakHourData.actual / averageUsage) * 100))}%` }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Peak Reduction</CardDescription>
+                      <CardTitle className="text-xl font-bold text-success">{peakReductionPercent}%</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">Potential savings: {potentialPeakSavings} kW</p>
+                      <div className="w-full h-1.5 bg-muted mt-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-success h-full" 
+                          style={{ width: `${peakReductionPercent}%` }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t">
+                <h4 className="font-medium mb-3">Peak Shaving Recommendations</h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
+                    <span>Implement load shedding during identified peak hours (10:00, 14:00, 16:00)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
+                    <span>Schedule high-power operations outside of peak hours to flatten consumption curve</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5"></div>
+                    <span>Consider installing energy storage systems to reduce peak demand charges</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
